@@ -75,6 +75,11 @@ echo "开始测试..."
 echo "=========================================="
 echo ""
 
+# 清空数据库并重新开始测试
+echo -e "${YELLOW}[准备] 清空数据库，重新测试${NC}"
+docker exec -i crop mysql -u root -p123456 -e "USE crop_db; DELETE FROM crop;" 2>/dev/null
+echo ""
+
 # 1. 测试添加农作物 (POST /crop)
 echo -e "${YELLOW}[测试 1/5] 添加农作物${NC}"
 CROP_JSON='{"name":"水稻","category":"粮食","growthCycle":120}'
@@ -92,20 +97,25 @@ echo -e "${YELLOW}[测试 3/5] 查询所有农作物${NC}"
 test_api "查询所有农作物" "GET" "$BASE_URL/list" "" "200"
 echo ""
 
+# 获取第一个农作物的ID
+FIRST_ID=$(curl -s http://localhost:8080/crop/list | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
+echo -e "${YELLOW}[信息] 第一个农作物ID: $FIRST_ID${NC}"
+echo ""
+
 # 4. 测试根据ID查询 (GET /crop/{id})
 echo -e "${YELLOW}[测试 4/5] 根据ID查询农作物${NC}"
-test_api "根据ID查询" "GET" "$BASE_URL/1" "" "200"
+test_api "根据ID查询" "GET" "$BASE_URL/$FIRST_ID" "" "200"
 echo ""
 
 # 5. 测试更新农作物 (PUT /crop/{id})
 echo -e "${YELLOW}[测试 5/5] 更新农作物${NC}"
 UPDATE_JSON='{"name":"玉米","category":"粮食","growthCycle":90}'
-test_api "更新农作物" "PUT" "$BASE_URL/1" "$UPDATE_JSON" "200"
+test_api "更新农作物" "PUT" "$BASE_URL/$FIRST_ID" "$UPDATE_JSON" "200"
 echo ""
 
 # 6. 验证更新结果
 echo -e "${YELLOW}[额外测试] 验证更新结果${NC}"
-result=$(curl -s -X GET "$BASE_URL/1")
+result=$(curl -s -X GET "$BASE_URL/$FIRST_ID")
 if echo "$result" | grep -q "玉米"; then
     echo -e "${GREEN}✅ 更新验证成功${NC}"
     ((PASS++))
@@ -116,9 +126,27 @@ else
 fi
 echo ""
 
+# 获取第二个农作物ID并测试删除
+SECOND_ID=$(curl -s http://localhost:8080/crop/list | grep -o '"id":[0-9]*' | tail -1 | grep -o '[0-9]*')
+echo -e "${YELLOW}[信息] 第二个农作物ID: $SECOND_ID${NC}"
+echo ""
+
 # 测试删除 (单独测试，可能影响后续测试)
 echo -e "${YELLOW}[额外测试] 删除农作物${NC}"
-test_api "删除农作物" "DELETE" "$BASE_URL/2" "" "204"
+test_api "删除农作物" "DELETE" "$BASE_URL/$SECOND_ID" "" "204"
+echo ""
+
+# 验证删除
+echo -e "${YELLOW}[额外测试] 验证删除结果${NC}"
+result=$(curl -s -X GET "$BASE_URL/$SECOND_ID")
+if [ -z "$result" ]; then
+    echo -e "${GREEN}✅ 删除验证成功${NC}"
+    ((PASS++))
+else
+    echo -e "${RED}❌ 删除验证失败${NC}"
+    echo "  Response: $result"
+    ((FAIL++))
+fi
 echo ""
 
 echo "=========================================="
