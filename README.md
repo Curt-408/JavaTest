@@ -48,7 +48,21 @@ src/main/java/com/example/crop/
 - Maven 3.6+
 - MySQL 8.0+
 
-### 2. 数据库配置
+### 2. Docker MySQL 快速启动（推荐）
+
+```bash
+# 1. 启动 MySQL 容器
+docker run -d \
+  --name crop \
+  -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=123456 \
+  mysql:8.0
+
+# 2. 创建数据库
+docker exec -i crop mysql -u root -p123456 < init.sql
+```
+
+### 3. 数据库配置
 
 创建数据库并执行 `init.sql`：
 
@@ -65,23 +79,23 @@ CREATE TABLE crop (
 );
 ```
 
-### 3. 修改配置
+### 4. 修改配置
 
-编辑 `src/main/resources/application.yml`，修改数据库密码：
+编辑 `src/main/resources/application.yml`，修改数据库密码（如果需要）：
 
 ```yaml
 spring:
   datasource:
-    password: 你的MySQL密码
+    password: 123456
 ```
 
-### 4. 运行项目
+### 5. 运行项目
 
 ```bash
 mvn spring-boot:run
 ```
 
-### 5. 访问接口文档
+### 6. 访问接口文档
 
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - API Docs: http://localhost:8080/api-docs
